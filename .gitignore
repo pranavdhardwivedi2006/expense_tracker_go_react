@@ -1,0 +1,10 @@
+# Dependency directories
+frontend/node_modules/
+backend/vendor/
+
+# Binary files
+*.exe
+*.log
+
+# Environment variables
+.env
