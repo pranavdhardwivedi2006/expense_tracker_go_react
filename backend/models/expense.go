@@ -10,4 +10,5 @@ type Expense struct {
 	Category    string             `bson:"category" json:"category"`
 	Description string             `bson:"description" json:"description"`
 	Date        string             `bson:"date" json:"date"`
+	Email       string             `json:"-" bson:"email"`
 }

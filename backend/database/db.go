@@ -10,31 +10,29 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-// global variable to use the database from other files
-var Collection *mongo.Collection
+var Client *mongo.Client
 
-func ConnectDB() {
-	// address of MongoDB server
+func ConnectDB() *mongo.Client {
+	// 1. Set connection URI
 	clientOptions := options.Client().ApplyURI("mongodb://127.0.0.1:27017")
 
-	// timeout
+	// 2. Create context with timeout
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	client, err := mongo.Connect(ctx, clientOptions)
+	// 3. Connect
+	var err error
+	Client, err = mongo.Connect(ctx, clientOptions)
 	if err != nil {
 		log.Fatal("Connection Failed:", err)
 	}
 
-	// check the Connection
-	err = client.Ping(ctx, nil)
+	// 4. Ping to verify
+	err = Client.Ping(ctx, nil)
 	if err != nil {
-		log.Fatal("Either MongoDb is not started or connection failed:", err)
+		log.Fatal("Either MongoDB is not started or connection failed:", err)
 	}
 
 	fmt.Println("Successfully Connected to MongoDB!")
-
-	// Collection Set karna
-	// DB Name: expense_tracker_db, Collection Name: expenses
-	Collection = client.Database("expense_tracker_db").Collection("expenses")
+	return Client
 }

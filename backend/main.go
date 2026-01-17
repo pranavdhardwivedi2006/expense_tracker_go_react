@@ -18,7 +18,7 @@ func main() {
 
 	r := mux.NewRouter() // router
 
-	routes.ExpenseRoutes(r)
+	routes.SetupRoutes(r)
 
 	// test route
 	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -32,10 +32,11 @@ func main() {
 	}).Methods("GET")
 
 	// CORS Setup
+	// CORS Setup
 	c := cors.New(cors.Options{
-		AllowedOrigins:   []string{"http://localhost:5173"}, // address of frontend
-		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE"},
-		AllowedHeaders:   []string{"Content-Type"},
+		AllowedOrigins:   []string{"http://localhost:5173"},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"Content-Type", "Authorization"},
 		AllowCredentials: true,
 	})
 

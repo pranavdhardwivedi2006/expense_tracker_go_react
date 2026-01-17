@@ -1,208 +1,138 @@
-"use client"
-
-import { useEffect, useState } from "react"
-import axios from "axios"
-import ExpenseForm from "../components/ExpenseForm"
-import {
-  Wallet,
-  TrendingUp,
-  Pencil,
-  Trash2,
-  ShoppingCart,
-  Car,
-  Utensils,
-  Film,
-  Zap,
-  Home,
-  Heart,
-  MoreHorizontal,
-  Receipt,
-} from "lucide-react"
-
-// Category icon mapping
-const getCategoryIcon = (category) => {
-  const categoryLower = category?.toLowerCase() || ""
-  if (categoryLower.includes("food") || categoryLower.includes("grocery") || categoryLower.includes("restaurant")) {
-    return { icon: Utensils, color: "bg-orange-100 text-orange-600" }
-  }
-  if (
-    categoryLower.includes("transport") ||
-    categoryLower.includes("travel") ||
-    categoryLower.includes("fuel") ||
-    categoryLower.includes("car")
-  ) {
-    return { icon: Car, color: "bg-blue-100 text-blue-600" }
-  }
-  if (categoryLower.includes("shopping") || categoryLower.includes("clothes")) {
-    return { icon: ShoppingCart, color: "bg-pink-100 text-pink-600" }
-  }
-  if (categoryLower.includes("entertainment") || categoryLower.includes("movie")) {
-    return { icon: Film, color: "bg-purple-100 text-purple-600" }
-  }
-  if (categoryLower.includes("utility") || categoryLower.includes("bill") || categoryLower.includes("electric")) {
-    return { icon: Zap, color: "bg-yellow-100 text-yellow-600" }
-  }
-  if (categoryLower.includes("rent") || categoryLower.includes("home") || categoryLower.includes("house")) {
-    return { icon: Home, color: "bg-green-100 text-green-600" }
-  }
-  if (categoryLower.includes("health") || categoryLower.includes("medical")) {
-    return { icon: Heart, color: "bg-red-100 text-red-600" }
-  }
-  return { icon: MoreHorizontal, color: "bg-gray-100 text-gray-600" }
-}
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
+import { TrendingUp, Plus, History, ChevronDown } from 'lucide-react';
+import { api } from '../services/api'; // Import API
 
 const Dashboard = () => {
-  const [expenses, setExpenses] = useState([])
-  const [editingExpense, setEditingExpense] = useState(null)
-
-  const fetchExpenses = () => {
-    axios
-      .get("http://localhost:5000/api/expenses")
-      .then((response) => setExpenses(response.data))
-      .catch((error) => console.error("Error fetching data:", error))
-  }
-
-  const handleDelete = (id) => {
-    if (window.confirm("Are you sure you want to delete this expense?")) {
-      axios
-        .delete(`http://localhost:5000/api/expenses/${id}`)
-        .then(() => {
-          fetchExpenses()
-        })
-        .catch((error) => console.error("Error deleting:", error))
-    }
-  }
-
-  const handleEdit = (expense) => {
-    setEditingExpense(expense)
-    window.scrollTo({ top: 0, behavior: "smooth" })
-  }
+  const navigate = useNavigate();
+  const [summary, setSummary] = useState([]);
+  const [user, setUser] = useState(null);
+  const [totalSpent, setTotalSpent] = useState(0);
 
   useEffect(() => {
-    fetchExpenses()
-  }, [])
+    const fetchData = async () => {
+      try {
+        const summaryData = await api.getSummary();
+        const userData = await api.getUser();
+        setSummary(summaryData);
+        setUser(userData);
+        setTotalSpent(summaryData.reduce((acc, item) => acc + item.total, 0));
+      } catch (error) {
+        console.error("Failed to fetch dashboard data");
+      }
+    };
+    fetchData();
+  }, []);
 
-  const totalAmount = expenses.reduce((acc, curr) => acc + curr.amount, 0)
+  const budgetPercentage = user ? (totalSpent / user.budget) * 100 : 0;
+  
+  const getProgressColor = () => {
+    if (budgetPercentage < 50) return 'bg-green-500';
+    if (budgetPercentage < 80) return 'bg-orange-500';
+    return 'bg-red-500';
+  };
+
+  const COLORS = ['#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#3b82f6'];
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="flex items-center gap-3 mb-8">
-          <div className="p-3 bg-teal-100 rounded-xl">
-            <Wallet className="w-8 h-8 text-teal-600" />
-          </div>
+    <div className="p-6 lg:p-8 max-w-6xl mx-auto">
+      {/* Premium Card */}
+      <div className="bg-gradient-to-br from-purple-900/40 to-pink-900/40 backdrop-blur-xl rounded-3xl p-6 lg:p-8 mb-8 border border-white/10 shadow-2xl">
+        <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Expense Tracker</h1>
-            <p className="text-gray-500">Manage your finances effortlessly</p>
+            <p className="text-gray-400 text-sm mb-1">Total Monthly Spending</p>
+            <h2 className="text-4xl lg:text-5xl font-bold text-white">₹{totalSpent.toLocaleString()}</h2>
+          </div>
+          <div className="bg-purple-600/30 p-4 rounded-2xl">
+            <TrendingUp className="text-purple-400" size={32} />
           </div>
         </div>
-
-        {/* Total Balance Card */}
-        <div className="bg-gradient-to-br from-teal-600 to-teal-700 rounded-2xl p-6 mb-8 text-white shadow-lg">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-teal-100 text-sm font-medium mb-1">Total Spending</p>
-              <p className="text-4xl font-bold">
-                ₹{totalAmount.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </p>
-              <div className="flex items-center gap-2 mt-3">
-                <div className="flex items-center gap-1 bg-white/20 px-3 py-1 rounded-full text-sm">
-                  <Receipt className="w-4 h-4" />
-                  {expenses.length} transaction{expenses.length !== 1 ? "s" : ""}
-                </div>
-              </div>
-            </div>
-            <div className="hidden sm:flex items-center gap-2">
-              <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
-              <span className="text-teal-100 text-sm">Live</span>
-            </div>
+        
+        <div className="mt-6">
+          <div className="flex justify-between text-sm mb-2">
+            <span className="text-gray-400">Budget Used</span>
+            <span className="text-white font-semibold">{budgetPercentage.toFixed(1)}%</span>
           </div>
-        </div>
-
-        {/* Expense Form */}
-        <ExpenseForm onAdd={fetchExpenses} editData={editingExpense} setEditData={setEditingExpense} />
-
-        {/* Recent Expenses */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-100">
-            <div className="flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-teal-600" />
-              <h2 className="text-lg font-semibold text-gray-900">Recent Transactions</h2>
-            </div>
+          <div className="h-3 bg-gray-800 rounded-full overflow-hidden">
+            <div 
+              className={`h-full ${getProgressColor()} transition-all duration-500 ${budgetPercentage > 100 ? 'animate-pulse' : ''}`}
+              style={{ width: `${Math.min(budgetPercentage, 100)}%` }}
+            />
           </div>
-
-          {expenses.length === 0 ? (
-            <div className="px-6 py-12 text-center">
-              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Receipt className="w-8 h-8 text-gray-400" />
-              </div>
-              <p className="text-gray-500 font-medium">No expenses yet</p>
-              <p className="text-gray-400 text-sm mt-1">Add your first expense to get started</p>
-            </div>
-          ) : (
-            <div className="divide-y divide-gray-100">
-              {expenses.map((expense) => {
-                const { icon: CategoryIcon, color } = getCategoryIcon(expense.category)
-                return (
-                  <div
-                    key={expense.id}
-                    className="px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors group"
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className={`p-2.5 rounded-xl ${color}`}>
-                        <CategoryIcon className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-gray-900">{expense.title}</p>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
-                            {expense.category}
-                          </span>
-                          <span className="text-xs text-gray-400">
-                            {new Date(expense.date).toLocaleDateString("en-IN", {
-                              day: "numeric",
-                              month: "short",
-                              year: "numeric",
-                            })}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-3">
-                      <p className="font-semibold text-gray-900 text-lg">₹{expense.amount.toLocaleString("en-IN")}</p>
-
-                      {/* Action Buttons */}
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button
-                          onClick={() => handleEdit(expense)}
-                          className="p-2 rounded-lg hover:bg-teal-100 text-gray-400 hover:text-teal-600 transition-colors"
-                          title="Edit"
-                        >
-                          <Pencil className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(expense.id)}
-                          className="p-2 rounded-lg hover:bg-red-100 text-gray-400 hover:text-red-600 transition-colors"
-                          title="Delete"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
+          {user && (
+            <p className="text-gray-400 text-xs mt-2">
+              ₹{(user.budget - totalSpent).toLocaleString()} remaining of ₹{user.budget.toLocaleString()}
+            </p>
           )}
         </div>
+      </div>
 
-        {/* Footer */}
-        <p className="text-center text-gray-400 text-sm mt-8">Expense Tracker - Keep your finances in check</p>
+      {/* Action Buttons */}
+      <div className="grid gap-4 mb-8">
+        <button
+          onClick={() => navigate('/add')}
+          className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white py-6 px-8 rounded-2xl flex items-center justify-between shadow-lg shadow-purple-500/30 transition-all hover:scale-[1.02] group"
+        >
+          <div className="flex items-center gap-4">
+            <div className="bg-white/20 p-3 rounded-xl">
+              <Plus size={24} />
+            </div>
+            <div className="text-left">
+              <h3 className="text-xl font-bold">Add New Expense</h3>
+              <p className="text-purple-200 text-sm">Track your spending</p>
+            </div>
+          </div>
+          <ChevronDown className="rotate-[-90deg] group-hover:translate-x-1 transition-transform" />
+        </button>
+
+        <button
+          onClick={() => navigate('/history')}
+          className="bg-gray-800/50 hover:bg-gray-800 border border-gray-700 text-white py-6 px-8 rounded-2xl flex items-center justify-between transition-all hover:scale-[1.02] group"
+        >
+          <div className="flex items-center gap-4">
+            <div className="bg-purple-600/20 p-3 rounded-xl">
+              <History size={24} className="text-purple-400" />
+            </div>
+            <div className="text-left">
+              <h3 className="text-xl font-bold">View History</h3>
+              <p className="text-gray-400 text-sm">See all transactions</p>
+            </div>
+          </div>
+          <ChevronDown className="rotate-[-90deg] group-hover:translate-x-1 transition-transform" />
+        </button>
+      </div>
+
+      {/* Chart */}
+      <div className="bg-gray-800/50 backdrop-blur-xl rounded-3xl p-8 border border-gray-700">
+        <h3 className="text-xl font-bold text-white mb-6">Category Breakdown</h3>
+        <div style={{ width: '100%', height: 300 }}>
+          <ResponsiveContainer>
+            <PieChart>
+              <Pie
+                data={summary}
+                cx="50%"
+                cy="50%"
+                innerRadius={60}
+                outerRadius={100}
+                paddingAngle={5}
+                dataKey="total"
+                label={({ _id, percent }) => `${_id} ${(percent * 100).toFixed(0)}%`}
+              >
+                {summary.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                ))}
+              </Pie>
+              <Tooltip 
+                contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '8px' }}
+                formatter={(value) => `₹${value.toLocaleString()}`}
+              />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default Dashboard
+export default Dashboard;

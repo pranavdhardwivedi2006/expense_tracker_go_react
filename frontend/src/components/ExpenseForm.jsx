@@ -1,5 +1,3 @@
-"use client"
-
 import { useState, useEffect } from "react"
 import axios from "axios"
 import { FileText, DollarSign, Tag, Calendar, Plus, Pencil, X } from "lucide-react"
@@ -14,7 +12,12 @@ const ExpenseForm = ({ onAdd, editData, setEditData }) => {
 
   useEffect(() => {
     if (editData) {
-      setFormData(editData)
+      setFormData({
+        title: editData.title,
+        amount: editData.amount,
+        category: editData.category,
+        date: new Date(editData.date).toISOString().split("T")[0], // Date format fix
+      })
     } else {
       setFormData({ title: "", amount: "", category: "", date: "" })
     }
@@ -24,40 +27,54 @@ const ExpenseForm = ({ onAdd, editData, setEditData }) => {
     setFormData({ ...formData, [e.target.name]: e.target.value })
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
 
-    if (editData) {
-      // === UPDATE LOGIC (PUT Request) ===
-      axios
-        .put(`http://localhost:5000/api/expenses/${editData.id}`, {
-          title: formData.title,
-          amount: Number.parseFloat(formData.amount),
-          category: formData.category,
-          date: formData.date,
-        })
-        .then(() => {
-          alert("Expense Updated!")
-          onAdd()
-          setEditData(null)
-          setFormData({ title: "", amount: "", category: "", date: "" })
-        })
-        .catch((err) => console.error(err))
-    } else {
-      // === ADD LOGIC (POST Request) ===
-      axios
-        .post("http://localhost:5000/api/expenses", {
-          title: formData.title,
-          amount: Number.parseFloat(formData.amount),
-          category: formData.category,
-          date: formData.date,
-        })
-        .then(() => {
-          alert("Expense Added!")
-          onAdd()
-          setFormData({ title: "", amount: "", category: "", date: "" })
-        })
-        .catch((err) => console.error(err))
+    // token nikalo
+    const token = localStorage.getItem('token')
+    
+    // header banao
+    const config = {
+      headers: { Authorization: `Bearer ${token}` }
+    }
+
+    try {
+      if (editData) {
+        // === UPDATE LOGIC (PUT Request) ===
+        await axios.put(
+          `http://localhost:5000/api/expenses/${editData.id}`, 
+          {
+            title: formData.title,
+            amount: Number.parseFloat(formData.amount),
+            category: formData.category,
+            date: formData.date,
+          },
+          config // <-- Token bheja
+        )
+        alert("Expense Updated!")
+        onAdd()
+        setEditData(null)
+        setFormData({ title: "", amount: "", category: "", date: "" })
+        
+      } else {
+        // === ADD LOGIC (POST Request) ===
+        await axios.post(
+          "http://localhost:5000/api/expenses", 
+          {
+            title: formData.title,
+            amount: Number.parseFloat(formData.amount),
+            category: formData.category,
+            date: formData.date,
+          },
+          config // <-- Token bheja
+        )
+        alert("Expense Added!")
+        onAdd()
+        setFormData({ title: "", amount: "", category: "", date: "" })
+      }
+    } catch (err) {
+      console.error(err)
+      alert("Error saving expense. Please try logging in again.")
     }
   }
 
