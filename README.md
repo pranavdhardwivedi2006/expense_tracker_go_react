@@ -4,9 +4,6 @@ A powerful and responsive **Expense Tracking Application** built to help users m
 
 This project leverages the **performance of Go (Golang)** for the backend and the **interactivity of React** for the frontend, ensuring a seamless user experience.
 
-![Dashboard Screenshot](<img width="1920" height="1080" alt="Screenshot 2026-01-18 233221" src="https://github.com/user-attachments/assets/e839b150-d4d4-47d5-b3b3-9ec875c2fbf9" />)
-*(Add your dashboard screenshot here)*
-
 ---
 
 ## 🚀 Tech Stack
@@ -43,15 +40,11 @@ This project leverages the **performance of Go (Golang)** for the backend and th
 
 | Dashboard | Add Expense |
 |-----------|-------------|
-| ![Dashboard](<img width="1920" height="1080" alt="Screenshot 2026-01-18 233221" src="https://github.com/user-attachments/assets/e839b150-d4d4-47d5-b3b3-9ec875c2fbf9" />
-) | ![Add Expense](<img width="1920" height="1080" alt="Screenshot 2026-01-18 233227" src="https://github.com/user-attachments/assets/b2d36942-ec99-4d54-b8dd-890e606ae373" />
-) |
+| <img width="1920" height="1080" alt="Screenshot 2026-01-18 233221" src="https://github.com/user-attachments/assets/e839b150-d4d4-47d5-b3b3-9ec875c2fbf9" /> |<img width="1920" height="1080" alt="Screenshot 2026-01-18 233227" src="https://github.com/user-attachments/assets/b2d36942-ec99-4d54-b8dd-890e606ae373" />|
 
 | History & Filters | Settings |
 |-------------------|----------|
-| ![History](<img width="1920" height="1080" alt="Screenshot 2026-01-18 233231" src="https://github.com/user-attachments/assets/0645f1df-1cce-49bf-be1f-c11f74e60959" />
-) | ![Settings](<img width="1920" height="1080" alt="Screenshot 2026-01-18 233231" src="https://github.com/user-attachments/assets/bd7aa15b-fb64-43cb-a1a6-89a356718452" />
-) |
+| <img width="1920" height="1080" alt="Screenshot 2026-01-18 233231" src="https://github.com/user-attachments/assets/0645f1df-1cce-49bf-be1f-c11f74e60959" /> | <img width="1920" height="1080" alt="Screenshot 2026-01-18 233231" src="https://github.com/user-attachments/assets/bd7aa15b-fb64-43cb-a1a6-89a356718452" /> |
 
 ---
 
@@ -61,5 +54,5 @@ Follow these steps to run the project locally.
 
 ### 1. Clone the Repository
 ```bash
-git clone [https://github.com/your-username/expense-tracker.git](https://github.com/your-username/expense-tracker.git)
+git clone [https://github.com/pranavdhardwivedi2006/expense-tracker.git](https://github.com/pranavdhardwivedi2006/expense-tracker.git)
 cd expense-tracker
