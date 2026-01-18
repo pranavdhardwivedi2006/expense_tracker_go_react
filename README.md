@@ -44,7 +44,7 @@ This project leverages the **performance of Go (Golang)** for the backend and th
 
 | History & Filters | Settings |
 |-------------------|----------|
-| <img width="1920" height="1080" alt="Screenshot 2026-01-18 233231" src="https://github.com/user-attachments/assets/0645f1df-1cce-49bf-be1f-c11f74e60959" /> | <img width="1920" height="1080" alt="Screenshot 2026-01-18 233231" src="https://github.com/user-attachments/assets/bd7aa15b-fb64-43cb-a1a6-89a356718452" /> |
+| <img width="1920" height="1080" alt="Screenshot 2026-01-18 233231" src="https://github.com/user-attachments/assets/0645f1df-1cce-49bf-be1f-c11f74e60959" /> | <img width="1920" height="1080" alt="Screenshot 2026-01-18 233236" src="https://github.com/user-attachments/assets/a096bd6b-ea27-46ba-aec4-82164b92bdd2" /> |
 
 ---
 
