@@ -3,7 +3,9 @@ package controllers
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -14,6 +16,7 @@ import (
 	"github.com/gorilla/mux"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 // Helper: Extract Email from JWT Token
@@ -22,30 +25,24 @@ func getEmailFromToken(r *http.Request) string {
 	if authHeader == "" {
 		return ""
 	}
-	// Remove "Bearer " prefix
 	tokenString := strings.TrimPrefix(authHeader, "Bearer ")
-
 	claims := &Claims{}
-	// jwtKey comes from auth_controller.go (make sure they are in the same package)
 	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
 		return jwtKey, nil
 	})
-
 	if err != nil || !token.Valid {
 		return ""
 	}
 	return claims.Email
 }
 
-// 1. CREATE Expense
+// 1. CREATE Expense (Date Fix Applied)
 func CreateExpense(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	// Security: Get User Email
 	userEmail := getEmailFromToken(r)
 	if userEmail == "" {
 		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(map[string]string{"error": "Unauthorized"})
 		return
 	}
 
@@ -56,7 +53,12 @@ func CreateExpense(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 
 	expense.ID = primitive.NewObjectID()
-	expense.Email = userEmail // <-- Bind expense to this user
+	expense.Email = userEmail
+
+	// FIX: String check instead of .IsZero() [Image 1 Solution]
+	if expense.Date == "" {
+		expense.Date = time.Now().Format("2006-01-02")
+	}
 
 	_, err := database.Client.Database("expense_tracker").Collection("expenses").InsertOne(ctx, expense)
 	if err != nil {
@@ -69,31 +71,61 @@ func CreateExpense(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(expense)
 }
 
-// 2. GET Expenses
+// 2. GET Expenses (Unkeyed Fields Fix Applied)
 func GetExpenses(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	// Security: Get User Email
 	userEmail := getEmailFromToken(r)
 	if userEmail == "" {
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 
-	var expenses []models.Expense
+	query := r.URL.Query()
+	monthStr := query.Get("month")
+	yearStr := query.Get("year")
+	category := query.Get("category")
+
+	filter := bson.M{"email": userEmail}
+
+	if monthStr != "" && yearStr != "" {
+		month, _ := strconv.Atoi(monthStr)
+		year, _ := strconv.Atoi(yearStr)
+
+		startDate := fmt.Sprintf("%04d-%02d-01", year, month)
+
+		endMonth := month + 1
+		endYear := year
+		if endMonth > 12 {
+			endMonth = 1
+			endYear++
+		}
+		endDate := fmt.Sprintf("%04d-%02d-01", endYear, endMonth)
+
+		filter["date"] = bson.M{
+			"$gte": startDate,
+			"$lt":  endDate,
+		}
+	}
+
+	if category != "" && category != "All" {
+		filter["category"] = category
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	// Security: Filter by Email
-	cursor, err := database.Client.Database("expense_tracker").Collection("expenses").Find(ctx, bson.M{"email": userEmail})
+	// FIX: Added 'Key' and 'Value' explicitly [Image 2 Solution]
+	opts := options.Find().SetSort(bson.D{{Key: "date", Value: -1}})
 
+	cursor, err := database.Client.Database("expense_tracker").Collection("expenses").Find(ctx, filter, opts)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]string{"error": "Error fetching expenses"})
 		return
 	}
 	defer cursor.Close(ctx)
 
+	var expenses []models.Expense
 	for cursor.Next(ctx) {
 		var expense models.Expense
 		cursor.Decode(&expense)
@@ -110,78 +142,58 @@ func GetExpenses(w http.ResponseWriter, r *http.Request) {
 // 3. DELETE Expense
 func DeleteExpense(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-
 	userEmail := getEmailFromToken(r)
 	if userEmail == "" {
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
-
 	params := mux.Vars(r)
-	expenseID := params["id"]
-	id, err := primitive.ObjectIDFromHex(expenseID)
+	id, err := primitive.ObjectIDFromHex(params["id"])
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	// Security: Delete only if ID AND Email match
 	filter := bson.M{"_id": id, "email": userEmail}
-
 	result, err := database.Client.Database("expense_tracker").Collection("expenses").DeleteOne(ctx, filter)
-
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-
 	if result.DeletedCount == 0 {
 		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(map[string]string{"error": "Expense not found or unauthorized"})
+		json.NewEncoder(w).Encode(map[string]string{"error": "Expense not found"})
 		return
 	}
-
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{"message": "Expense deleted successfully"})
+	json.NewEncoder(w).Encode(map[string]string{"message": "Deleted successfully"})
 }
 
-// 4. UPDATE Expense (This is the code you asked for)
+// 4. UPDATE Expense
 func UpdateExpense(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-
-	// Security: Get User Email
 	userEmail := getEmailFromToken(r)
 	if userEmail == "" {
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
-
-	// Get ID from URL
 	params := mux.Vars(r)
-	expenseID := params["id"]
-	id, err := primitive.ObjectIDFromHex(expenseID)
+	id, err := primitive.ObjectIDFromHex(params["id"])
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "Invalid ID"})
 		return
 	}
-
-	// Read new data from body
 	var expense models.Expense
 	if err := json.NewDecoder(r.Body).Decode(&expense); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	// Security: Only update if ID AND Email match
 	filter := bson.M{"_id": id, "email": userEmail}
-
 	update := bson.M{
 		"$set": bson.M{
 			"title":    expense.Title,
@@ -190,62 +202,47 @@ func UpdateExpense(w http.ResponseWriter, r *http.Request) {
 			"date":     expense.Date,
 		},
 	}
-
 	result, err := database.Client.Database("expense_tracker").Collection("expenses").UpdateOne(ctx, filter, update)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]string{"error": "Could not update"})
 		return
 	}
-
 	if result.MatchedCount == 0 {
 		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(map[string]string{"error": "Expense not found or unauthorized"})
 		return
 	}
-
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{"message": "Expense updated successfully"})
+	json.NewEncoder(w).Encode(map[string]string{"message": "Updated successfully"})
 }
 
+// 5. GET Summary
 func GetExpenseSummary(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-
 	userEmail := getEmailFromToken(r)
 	if userEmail == "" {
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
-
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	// MongoDB Aggregation Pipeline
-	// Ye query database mein hi saara calculation kar legi
 	pipeline := []bson.M{
-		// Stage 1: Sirf logged-in user ka data lo
 		{"$match": bson.M{"email": userEmail}},
-
-		// Stage 2: Category ke hisab se group karo aur total amount jodo
 		{"$group": bson.M{
-			"_id":   "$category",               // Group by Category
-			"total": bson.M{"$sum": "$amount"}, // Sum the Amounts
+			"_id":   "$category",
+			"total": bson.M{"$sum": "$amount"},
 		}},
 	}
-
 	cursor, err := database.Client.Database("expense_tracker").Collection("expenses").Aggregate(ctx, pipeline)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 	defer cursor.Close(ctx)
-
-	// Result format: [{"_id": "Food", "total": 500}, {"_id": "Travel", "total": 200}]
 	var results []bson.M
 	if err = cursor.All(ctx, &results); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-
 	json.NewEncoder(w).Encode(results)
 }
